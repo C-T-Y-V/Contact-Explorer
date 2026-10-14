@@ -1,5 +1,6 @@
 # Contact Explorer 📱⚡
 
+[![Android CI](https://github.com/C-T-Y-V/Contact-Explorer/actions/workflows/android-ci.yml/badge.svg)](https://github.com/C-T-Y-V/Contact-Explorer/actions/workflows/android-ci.yml)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4.svg?logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
 [![Material 3](https://img.shields.io/badge/Design-Material%203-7C3AED.svg)](https://m3.material.io/)
