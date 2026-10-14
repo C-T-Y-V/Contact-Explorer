@@ -29,14 +29,8 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
-
-      - name: Run Kotlin Compilation
-        run: ./gradlew compileReleaseKotlin --stacktrace
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace
