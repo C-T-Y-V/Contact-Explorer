@@ -64,6 +64,8 @@ class BuiltInFeatureScreens(
     private val onExportVcf: (List<String>?) -> Unit,
     private val onDeleteContacts: (List<String>) -> Unit,
     private val onShareContacts: (List<String>) -> Unit,
+    private val onOpenExportDialog: ((List<String>?) -> Unit)? = null,
+    private val onOpenKeepDataDialog: (() -> Unit)? = null,
 ) : ExplorerPlugin {
     override val id = "v2-v3-screens"
     override val features = listOf(
@@ -102,11 +104,20 @@ class BuiltInFeatureScreens(
         }
         registry.feature(feature("transfer")) {
             screen(ScreenContribution("transfer", "transfer", "Import / Export", Icons.Default.ImportExport) {
-                ImportExportFeatureScreen(vm, onImportCsv, onImportVcf, onExportCsv, onExportVcf)
+                ImportExportFeatureScreen(
+                    vm = vm,
+                    onImportCsv = onImportCsv,
+                    onImportVcf = onImportVcf,
+                    onExportCsv = onExportCsv,
+                    onExportVcf = onExportVcf,
+                    onOpenExportDialog = { onOpenExportDialog?.invoke(null) },
+                    onOpenKeepDataDialog = { onOpenKeepDataDialog?.invoke() },
+                )
             })
             selectionAction(SelectionActionContribution("bulk.share", "transfer", "Share", Icons.Default.Share, onShareContacts))
-            selectionAction(SelectionActionContribution("bulk.export-vcf", "transfer", "Export VCF", Icons.Default.ImportExport) { onExportVcf(it) })
-            selectionAction(SelectionActionContribution("bulk.export-csv", "transfer", "Export CSV", Icons.Default.ImportExport) { onExportCsv(it) })
+            selectionAction(SelectionActionContribution("bulk.export-advanced", "transfer", "Export Contacts", Icons.Default.ImportExport) {
+                if (onOpenExportDialog != null) onOpenExportDialog(it) else onExportVcf(it)
+            })
         }
     }
 }
@@ -356,14 +367,26 @@ private fun ImportExportFeatureScreen(
     onImportVcf: () -> Unit,
     onExportCsv: (List<String>?) -> Unit,
     onExportVcf: (List<String>?) -> Unit,
+    onOpenExportDialog: () -> Unit = {},
+    onOpenKeepDataDialog: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Contact portability", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Text("Import contacts from CSV or vCard, or export the phone contacts managed by this app.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onImportVcf, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.ImportExport, null); Spacer(Modifier.width(8.dp)); Text("Import VCF") }
-        Button(onClick = onImportCsv, modifier = Modifier.fillMaxWidth()) { Text("Import CSV") }
-        OutlinedButton(onClick = { onExportVcf(null) }, modifier = Modifier.fillMaxWidth()) { Text("Export all as VCF") }
-        OutlinedButton(onClick = { onExportCsv(null) }, modifier = Modifier.fillMaxWidth()) { Text("Export all as CSV") }
-        Text("${vm.contacts.size} contacts available", style = MaterialTheme.typography.bodySmall)
+        Text("Portability & Persistent Vault", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text("Export contacts in standard or organized format (online or offline), or preserve all groups & tags in your device storage.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Button(onClick = onOpenExportDialog, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.ImportExport, null); Spacer(Modifier.width(8.dp)); Text("Export Contacts (Standard / Organized)")
+        }
+
+        OutlinedButton(onClick = onOpenKeepDataDialog, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Restore, null); Spacer(Modifier.width(8.dp)); Text("Keep Data on Phone / Vault Backup")
+        }
+
+        Spacer(Modifier.height(4.dp))
+        Text("Import / Restore", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Button(onClick = onImportVcf, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.ImportExport, null); Spacer(Modifier.width(8.dp)); Text("Import VCF / Vault Backup") }
+        OutlinedButton(onClick = onImportCsv, modifier = Modifier.fillMaxWidth()) { Text("Import CSV") }
+
+        Text("${vm.contacts.size} contacts currently available", style = MaterialTheme.typography.bodySmall)
     }
 }

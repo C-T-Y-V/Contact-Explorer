@@ -3,6 +3,26 @@
 All notable changes to **Contact Explorer** will be documented in this file.
 The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v6.0.0] - Persistent Data Vault & Dual-Mode Export (4.4 MB)
+### Added
+- **Uninstall Data Retention (`android:hasFragileUserData`)**:
+  - Automatically triggers Android OS's native prompt (*"Keep app data?"*) upon uninstallation so user organization is never lost.
+- **Standalone Local Device Vault**:
+  - Save full contact hierarchy, custom groups, tags, notes, favorites, and smart rules into a portable `.cebak` / `.json` file stored in device storage (Downloads / Documents).
+  - 1-tap full structural restoration from local phone storage after re-installing or resetting devices.
+- **Dual-Mode Advanced Export**:
+  - **Organization Format Choice**:
+    - **Organized Format (Recommended)**: Preserves custom groups (`CATEGORIES:` in vCard 3.0), tags (`X-TAGS:`), notes, and favorites (`X-FAVORITE:`).
+    - **Standard / Default Format**: Clean universal vCard or CSV without extra app tags or metadata for maximum compatibility with legacy devices, car Bluetooth, or basic SIM/PCs.
+  - **Destination Choice**:
+    - **Offline (Phone Storage)**: Saves directly to phone storage (Downloads / Documents) via Android Storage Access Framework with zero internet or cloud dependence.
+    - **Online / Cloud Share**: Generates secure shareable URI via `FileProvider` and launches native Android Sharesheet (`Intent.ACTION_SEND`), enabling 1-tap export directly to Google Drive, Gmail, WhatsApp, Telegram, etc.
+- **Zero-Internet Architecture**: Contact Explorer maintains strict **0 internet permissions** (`android.permission.INTERNET` is NOT requested), guaranteeing 100% data privacy and offline integrity while delegating network transfers to trusted user apps via Android Sharesheet.
+
+### Changed
+- Unified selection and top-bar export workflows into `AdvancedExportDialog`.
+- Replaced separate file export menus with a consolidated, modern modal offering granular format and destination options.
+
 ---
 
 ## [v5.0.0] - Production Polish & UX Overhaul (4.4 MB)

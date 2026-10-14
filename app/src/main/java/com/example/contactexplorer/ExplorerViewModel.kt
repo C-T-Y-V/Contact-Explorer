@@ -22,6 +22,7 @@ import com.example.contactexplorer.data.FavoriteContact
 import com.example.contactexplorer.data.LabeledValue
 import com.example.contactexplorer.data.RecentContact
 import com.example.contactexplorer.data.SmartGroupRule
+import com.example.contactexplorer.data.VaultData
 import com.example.contactexplorer.data.OfflineIntelligence
 import android.content.Context
 import com.example.contactexplorer.permissions.ContactPermissions
@@ -429,11 +430,93 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun generateVaultBackupJson(): String {
+        val groupNamesMap = memberships.groupBy { it.contactId }.mapValues { (_, links) -> links.mapNotNull { link -> groups.find { it.id == link.groupId }?.name } }
+        val tagNamesMap = tagAssignments.groupBy { it.contactId }.mapValues { (_, links) -> links.mapNotNull { link -> tags.find { it.id == link.tagId }?.name } }
+        return ContactTransfer.toVaultJson(
+            contacts = contacts,
+            groupMap = groupNamesMap,
+            tagMap = tagNamesMap,
+            favorites = favorites,
+            groupsList = groups.map { it.name },
+            tagsList = tags.map { it.name },
+            smartRules = smartGroups.map { Triple(it.name, it.field, it.value) },
+        )
+    }
+
+    fun importVaultData(vault: VaultData, onComplete: (Int) -> Unit = {}) {
+        viewModelScope.launch {
+            var count = 0
+            val groupMap = groups.associate { it.name.lowercase() to it.id }.toMutableMap()
+            for (gName in vault.groups) {
+                if (gName.lowercase() !in groupMap) {
+                    val newId = dao.createGroup(ContactGroup(name = gName))
+                    groupMap[gName.lowercase()] = newId
+                }
+            }
+            val tagMap = tags.associate { it.name.lowercase() to it.id }.toMutableMap()
+            for (tName in vault.tags) {
+                if (tName.lowercase() !in tagMap) {
+                    val newId = dao.saveTag(ContactTag(name = tName))
+                    tagMap[tName.lowercase()] = newId
+                }
+            }
+            for ((name, field, value) in vault.smartRules) {
+                if (smartGroups.none { it.name == name && it.field == field && it.value == value }) {
+                    dao.createSmartGroup(SmartGroupRule(name = name, field = field, value = value))
+                }
+            }
+            for (draft in vault.contacts) {
+                try {
+                    val newId = repository.saveContact(null, draft)
+                    count++
+                    for (gName in draft.categories) {
+                        val gId = groupMap[gName.lowercase()] ?: dao.createGroup(ContactGroup(name = gName)).also { groupMap[gName.lowercase()] = it }
+                        dao.addMembership(ContactGroupMembership(newId, gId))
+                    }
+                    for (tName in draft.tags) {
+                        val tId = tagMap[tName.lowercase()] ?: dao.saveTag(ContactTag(name = tName)).also { tagMap[tName.lowercase()] = it }
+                        dao.assignTag(ContactTagAssignment(newId, tId))
+                    }
+                    if (draft.isFavorite) {
+                        dao.setFavorite(FavoriteContact(newId))
+                    }
+                } catch (e: Exception) {
+                    // Skip failed individual contacts
+                }
+            }
+            recordEvent(null, "Vault", "RESTORED", "Restored $count contacts with full group & tag structure from Vault.")
+            message = "Restored $count contacts from Vault."
+            refresh()
+            onComplete(count)
+        }
+    }
+
     fun importContact(draft: ContactDraft) {
         viewModelScope.launch {
-            runCatching { repository.saveContact(null, draft) }
-                .onSuccess { id -> recordEvent(id, draft.name, "IMPORTED", "Imported contact."); refresh() }
-                .onFailure { message = "Could not import ${draft.name}: ${it.message}"; revision++ }
+            try {
+                val id = repository.saveContact(null, draft)
+                // Auto-reconstruct categories/groups if present
+                for (groupName in draft.categories) {
+                    val existingGroup = groups.firstOrNull { it.name.equals(groupName, ignoreCase = true) }
+                    val gId = existingGroup?.id ?: dao.createGroup(ContactGroup(name = groupName))
+                    dao.addMembership(ContactGroupMembership(id, gId))
+                }
+                // Auto-reconstruct tags if present
+                for (tagName in draft.tags) {
+                    val existingTag = tags.firstOrNull { it.name.equals(tagName, ignoreCase = true) }
+                    val tId = existingTag?.id ?: dao.saveTag(ContactTag(name = tagName))
+                    dao.assignTag(ContactTagAssignment(id, tId))
+                }
+                if (draft.isFavorite) {
+                    dao.setFavorite(FavoriteContact(id))
+                }
+                recordEvent(id, draft.name, "IMPORTED", "Imported contact.")
+                refresh()
+            } catch (e: Exception) {
+                message = "Could not import ${draft.name}: ${e.message}"
+                revision++
+            }
         }
     }
 

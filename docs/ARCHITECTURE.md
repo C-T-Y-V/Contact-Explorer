@@ -153,3 +153,23 @@ Version 5:  4.4 MB (Production UI overhaul without binary growth)
 Contact Explorer strictly implements edge-to-edge window insets handling:
 - **`statusBarsPadding()`**: Ensures top bars, search headers, and action icons never collide with camera notches, status icons, or punch holes.
 - **`navigationBarsPadding()` / `imePadding()`**: Prevents bottom action bars, FABs, and bottom sheets from being obscured by Android 14/15 3-button or gesture navigation pills, or on-screen keyboards.
+
+---
+
+## 7. Persistent Data Vault & Dual-Mode Export Architecture (v6)
+
+### A. Uninstall Data Retention (`android:hasFragileUserData="true"`)
+- **Android OS Hook**: Declared in `AndroidManifest.xml` via `android:hasFragileUserData="true"`.
+- When the user initiates an uninstall from Android Settings or launcher, Android automatically prompts:
+  > *"Keep app data?"*
+- If confirmed by the user, Android's package manager preserves the Room database file (`ExplorerDatabase`) in internal storage across app reinstallations.
+
+### B. Standalone Local Device Vault (`.cebak` / JSON)
+- **100% Structural Serialization**: Compiles contacts, groups, tags, rules, and favorites into a lightweight JSON schema using Android's native `org.json` engine (0 additional binary dependencies).
+- **Direct Phone Storage Export**: Utilizes the Storage Access Framework (`ActivityResultContracts.CreateDocument`) to write the vault directly to user-chosen directories (Downloads, Documents, external SD).
+- **1-Tap Complete Restoration**: Re-creates missing groups, assigns tags, and restores custom memberships automatically.
+
+### C. Standards-Compliant Dual-Mode Export
+- **Standard Format**: Exports universal RFC 2426 vCard 3.0 (`.vcf`) or standard tabular `.csv` (name, phone, email, company, address, note).
+- **Organized Format**: Injects standards-compliant vCard `CATEGORIES:` (recognized universally by Apple Contacts and Google Contacts), alongside `X-TAGS:` and `X-FAVORITE:`.
+- **Zero-Internet Cloud Sharing (`FileProvider`)**: Operates strictly under **0 internet permissions**. Generates temporary cached files under `exports/` and delegates to Android Sharesheet (`Intent.ACTION_SEND` with `FLAG_GRANT_READ_URI_PERMISSION`) so external apps (Google Drive, WhatsApp, Gmail) manage transmission securely.

@@ -34,6 +34,9 @@ data class ContactDraft(
     val note: String = "",
     val phones: List<LabeledValue> = if (phone.isNotBlank()) listOf(LabeledValue(phone)) else emptyList(),
     val emails: List<LabeledValue> = if (email.isNotBlank()) listOf(LabeledValue(email, "Home", 1)) else emptyList(),
+    val categories: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
+    val isFavorite: Boolean = false,
 ) {
     val effectivePhones: List<LabeledValue>
         get() = if (phones.isNotEmpty()) phones else if (phone.isNotBlank()) listOf(LabeledValue(phone)) else emptyList()

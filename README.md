@@ -45,10 +45,15 @@ Default phonebook apps from major OEMs are bloated (often 40 MB – 100 MB+), he
 - **Fuzzy Relevance Matching**: Searches across names, phone numbers, emails, addresses, companies, notes, and user tags simultaneously.
 - **Weighted Recency & Frequency**: Contacts contacted recently or frequently rank higher naturally.
 
-### 🛡️ Privacy & Granular Control
+### 🛡️ Privacy, Persistent Vault & Dual-Mode Portability
+- **Uninstall Data Retention (`android:hasFragileUserData`)**: Integrates Android's native data retention prompt so users can choose *"Keep app data"* when uninstalling, keeping their custom groups and organization safe.
+- **Standalone Local Device Vault**: 1-tap export and 1-tap restoration of all contact structures, custom groups, tags, notes, favorites, and smart rules into a portable `.cebak` / `.json` file on phone storage (Downloads/Documents).
+- **Dual-Mode Advanced Export**:
+  - **Organized Format**: Preserves groups (`CATEGORIES:` in vCard 3.0), tags (`X-TAGS:`), and favorites (`X-FAVORITE:`).
+  - **Standard / Default Format**: Clean universal vCard or CSV without extra tags for maximum compatibility with legacy phones, cars, or basic SIM/PCs.
+  - **Offline vs Online Sharing**: Save offline directly to phone storage (via Storage Access Framework) or share online via Google Drive, WhatsApp, or Email using `FileProvider` — completely offline with zero internet permissions.
 - **Selective Field Sharing**: Share only what you want (e.g., share a contact's phone number without leaking their personal notes or home address).
 - **30-Day Recycle Bin**: Safe, non-destructive deletion. Restores contacts back into the Android system address book anytime within 30 days.
-- **Document Picker Import/Export**: Clean CSV and vCard (.vcf) import and export without requiring external storage permissions.
 
 ### 📞 Direct In-App Calling
 - Integrates `CALL_PHONE` and `Intent.ACTION_CALL` for direct 1-tap calling with graceful fallback to system dialer.

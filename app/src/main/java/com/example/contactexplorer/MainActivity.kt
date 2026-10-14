@@ -66,6 +66,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -252,14 +257,30 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
     var importFormat by remember { mutableStateOf("vcf") }
     val selectedIds = remember { mutableStateListOf<String>() }
 
+    var showAdvancedExportDialog by remember { mutableStateOf(false) }
+    var exportTargetIds by remember { mutableStateOf<List<String>?>(null) }
+    var showKeepDataVaultDialog by remember { mutableStateOf(false) }
+
     val importDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching {
             context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 ?: error("Could not read selected file.")
         }.onSuccess { text ->
-            val drafts = if (importFormat == "csv") ContactTransfer.fromCsv(text) else ContactTransfer.fromVcf(text)
-            drafts.forEach(vm::importContact)
-            Toast.makeText(context, "Importing ${drafts.size} contacts", Toast.LENGTH_SHORT).show()
+            val trimmed = text.trimStart()
+            if (importFormat == "vault" || (trimmed.startsWith("{") && trimmed.contains("\"contact_explorer_vault\""))) {
+                val vault = ContactTransfer.fromVaultJson(text)
+                if (vault != null) {
+                    vm.importVaultData(vault) { count ->
+                        Toast.makeText(context, "Restored $count contacts with groups & tags from Vault", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Invalid or corrupted Vault file.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                val drafts = if (importFormat == "csv") ContactTransfer.fromCsv(text) else ContactTransfer.fromVcf(text)
+                drafts.forEach(vm::importContact)
+                Toast.makeText(context, "Importing ${drafts.size} contacts", Toast.LENGTH_SHORT).show()
+            }
         }.onFailure { Toast.makeText(context, it.message ?: "Could not import file.", Toast.LENGTH_LONG).show() }
     }
     var pendingExportText by remember { mutableStateOf("") }
@@ -270,6 +291,11 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
     val exportVcfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/vcard")) { uri ->
         if (uri != null) runCatching { context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(pendingExportText) } ?: error("Could not write export file.") }
             .onFailure { Toast.makeText(context, it.message ?: "Could not export contacts.", Toast.LENGTH_LONG).show() }
+    }
+    val exportVaultLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) runCatching { context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(pendingExportText) } ?: error("Could not write vault file.") }
+            .onSuccess { Toast.makeText(context, "Saved Data Vault to phone storage.", Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(context, it.message ?: "Could not export vault.", Toast.LENGTH_LONG).show() }
     }
 
     var pendingCallNumber by remember { mutableStateOf<String?>(null) }
@@ -311,17 +337,26 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
             onAddTagToContacts = { ids -> showTagPickerFor = ids },
             onAssignTag = vm::addTagToContacts,
             onImportCsv = { importFormat = "csv"; importDocumentLauncher.launch(arrayOf("text/*", "application/*")) },
-            onImportVcf = { importFormat = "vcf"; importDocumentLauncher.launch(arrayOf("text/*", "application/*")) },
+            onImportVcf = { importFormat = "vcf"; importDocumentLauncher.launch(arrayOf("text/*", "application/*", "*/*")) },
             onExportCsv = { ids ->
+                exportTargetIds = ids
                 pendingExportText = ContactTransfer.toCsv(ids?.let { selected -> vm.contacts.filter { it.id in selected } } ?: vm.contacts)
                 exportCsvLauncher.launch("contacts.csv")
             },
             onExportVcf = { ids ->
+                exportTargetIds = ids
                 pendingExportText = ContactTransfer.toVcf(ids?.let { selected -> vm.contacts.filter { it.id in selected } } ?: vm.contacts)
                 exportVcfLauncher.launch("contacts.vcf")
             },
             onDeleteContacts = { ids -> deleteIdsTarget = ids },
             onShareContacts = { ids -> shareContactIds = ids },
+            onOpenExportDialog = { ids ->
+                exportTargetIds = ids
+                showAdvancedExportDialog = true
+            },
+            onOpenKeepDataDialog = {
+                showKeepDataVaultDialog = true
+            },
         ),
     )
     val defaultEnabledIds = builtInPlugins.flatMap { it.features }
@@ -634,6 +669,23 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
                                         )
                                     }
                                 }
+                                DropdownMenuItem(
+                                    text = { Text("Export contacts") },
+                                    leadingIcon = { Icon(Icons.Default.ImportExport, null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        exportTargetIds = null
+                                        showAdvancedExportDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Keep Data on Phone") },
+                                    leadingIcon = { Icon(Icons.Default.Security, null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showKeepDataVaultDialog = true
+                                    }
+                                )
                             }
                         }
                     },
@@ -736,21 +788,12 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
                                         )
                                     }
                                     DropdownMenuItem(
-                                        text = { Text("Export VCF") },
+                                        text = { Text("Export contacts") },
                                         leadingIcon = { Icon(Icons.Default.ImportExport, null) },
                                         onClick = {
                                             showSelectionMoreMenu = false
-                                            pendingExportText = ContactTransfer.toVcf(vm.contacts.filter { it.id in selectedIds })
-                                            exportVcfLauncher.launch("contacts.vcf")
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Export CSV") },
-                                        leadingIcon = { Icon(Icons.Default.ImportExport, null) },
-                                        onClick = {
-                                            showSelectionMoreMenu = false
-                                            pendingExportText = ContactTransfer.toCsv(vm.contacts.filter { it.id in selectedIds })
-                                            exportCsvLauncher.launch("contacts.csv")
+                                            exportTargetIds = selectedIds.toList()
+                                            showAdvancedExportDialog = true
                                         }
                                     )
                                 }
@@ -1083,6 +1126,367 @@ private fun ContactExplorerContent(vm: ExplorerViewModel) {
             }
         )
     }
+
+    if (showAdvancedExportDialog) {
+        val count = exportTargetIds?.size ?: contacts.size
+        AdvancedExportDialog(
+            contactsCount = count,
+            onDismiss = {
+                showAdvancedExportDialog = false
+                exportTargetIds = null
+            },
+            onConfirm = { fmt, isOrg, dest ->
+                val contactsToExport = exportTargetIds?.let { targetIds -> vm.contacts.filter { it.id in targetIds } } ?: vm.contacts
+                val groupMap = vm.memberships.groupBy { it.contactId }.mapValues { (_, links) -> links.mapNotNull { link -> vm.groups.find { it.id == link.groupId }?.name } }
+                val tagMap = vm.tagAssignments.groupBy { it.contactId }.mapValues { (_, links) -> links.mapNotNull { link -> vm.tags.find { it.id == link.tagId }?.name } }
+
+                when (fmt) {
+                    ExportFormat.VAULT -> {
+                        val vaultJson = vm.generateVaultBackupJson()
+                        if (dest == ExportDestination.OFFLINE) {
+                            pendingExportText = vaultJson
+                            exportVaultLauncher.launch("contact_explorer_vault.cebak")
+                        } else {
+                            shareFileOnline(context, "contact_explorer_vault.cebak", vaultJson, "application/json")
+                        }
+                    }
+                    ExportFormat.VCF -> {
+                        val vcf = ContactTransfer.toVcf(
+                            contacts = contactsToExport,
+                            groupMap = groupMap,
+                            tagMap = tagMap,
+                            favorites = vm.favorites,
+                            includeOrganization = isOrg,
+                        )
+                        val filename = if (isOrg) "organized_contacts.vcf" else "contacts.vcf"
+                        if (dest == ExportDestination.OFFLINE) {
+                            pendingExportText = vcf
+                            exportVcfLauncher.launch(filename)
+                        } else {
+                            shareFileOnline(context, filename, vcf, "text/x-vcard")
+                        }
+                    }
+                    ExportFormat.CSV -> {
+                        val csv = ContactTransfer.toCsv(
+                            contacts = contactsToExport,
+                            groupMap = groupMap,
+                            tagMap = tagMap,
+                            favorites = vm.favorites,
+                            includeOrganization = isOrg,
+                        )
+                        val filename = if (isOrg) "organized_contacts.csv" else "contacts.csv"
+                        if (dest == ExportDestination.OFFLINE) {
+                            pendingExportText = csv
+                            exportCsvLauncher.launch(filename)
+                        } else {
+                            shareFileOnline(context, filename, csv, "text/csv")
+                        }
+                    }
+                }
+                showAdvancedExportDialog = false
+                exportTargetIds = null
+            }
+        )
+    }
+
+    if (showKeepDataVaultDialog) {
+        KeepDataVaultDialog(
+            vm = vm,
+            onDismiss = { showKeepDataVaultDialog = false },
+            onBackupVault = {
+                pendingExportText = vm.generateVaultBackupJson()
+                exportVaultLauncher.launch("contact_explorer_vault.cebak")
+            },
+            onRestoreVault = {
+                importFormat = "vault"
+                importDocumentLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
+            }
+        )
+    }
+}
+
+private enum class ExportFormat(val title: String, val extension: String) {
+    VCF("vCard Contact File", "vcf"),
+    CSV("Spreadsheet Table", "csv"),
+    VAULT("Contact Explorer Vault", "cebak"),
+}
+
+private enum class ExportDestination { OFFLINE, ONLINE }
+
+private fun shareFileOnline(context: android.content.Context, filename: String, content: String, mimeType: String) {
+    runCatching {
+        val exportDir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+        val file = java.io.File(exportDir, filename).apply { writeText(content) }
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TITLE, filename)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share contacts via..."))
+    }.onFailure {
+        Toast.makeText(context, "Could not share file: ${it.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+private fun AdvancedExportDialog(
+    contactsCount: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (format: ExportFormat, isOrganized: Boolean, destination: ExportDestination) -> Unit,
+) {
+    var isOrganized by remember { mutableStateOf(true) }
+    var format by remember { mutableStateOf(ExportFormat.VCF) }
+    var destination by remember { mutableStateOf(ExportDestination.OFFLINE) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Export Contacts", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "$contactsCount contact${if (contactsCount == 1) "" else "s"} selected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("1. Organization Structure", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isOrganized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isOrganized = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = isOrganized, onClick = { isOrganized = true })
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text("Organized Format (Recommended)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Preserves groups, tags, notes & favorites so your structure is retained.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (!isOrganized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (!isOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            isOrganized = false
+                            if (format == ExportFormat.VAULT) format = ExportFormat.VCF
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = !isOrganized, onClick = {
+                            isOrganized = false
+                            if (format == ExportFormat.VAULT) format = ExportFormat.VCF
+                        })
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text("Standard / Default Format", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Clean universal format without app tags or groups. Compatible with any phone or SIM.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                Text("2. File Type", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ExportFormat.entries.forEach { f ->
+                        if (!isOrganized && f == ExportFormat.VAULT) return@forEach
+                        val isSelected = format == f
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { format = f }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = ".${f.extension.uppercase()}",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = when (f) {
+                                        ExportFormat.VCF -> "vCard"
+                                        ExportFormat.CSV -> "Excel / CSV"
+                                        ExportFormat.VAULT -> "Full Vault"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Text("3. Export Destination", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (destination == ExportDestination.OFFLINE) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { destination = ExportDestination.OFFLINE }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = if (destination == ExportDestination.OFFLINE) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Offline", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                            Text("Save to Phone", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (destination == ExportDestination.ONLINE) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { destination = ExportDestination.ONLINE }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, tint = if (destination == ExportDestination.ONLINE) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Online / Share", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                            Text("Drive, WhatsApp, Mail", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(format, isOrganized, destination) }) {
+                Text(if (destination == ExportDestination.OFFLINE) "Save to Phone" else "Share via Apps")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun KeepDataVaultDialog(
+    vm: ExplorerViewModel,
+    onDismiss: () -> Unit,
+    onBackupVault: () -> Unit,
+    onRestoreVault: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text("Keep Data on Uninstall", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Android OS Retention Active", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "When you uninstall Contact Explorer, Android will prompt:\n\"Keep app data?\"\nCheck that box to retain all groups, tags, rules, and contacts intact.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Standalone Device Storage Vault", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "To guarantee your organization survives full device resets or phone switches, save a copy of your organized structure to your device storage (Downloads / Documents).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = onBackupVault,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Save to Phone")
+                            }
+                            OutlinedButton(
+                                onClick = onRestoreVault,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Restore Vault")
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Currently: ${vm.contacts.size} contacts · ${vm.groups.size} groups · ${vm.tags.size} tags · ${vm.smartGroups.size} smart rules",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
 }
 
 private data class GroupDialog(val id: Long?, val name: String, val deleting: Boolean = false)
