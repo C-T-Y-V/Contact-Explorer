@@ -55,23 +55,25 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         themeMode = ThemeMode.entries.firstOrNull {
             it.name == getApplication<Application>().getSharedPreferences("explorer", Context.MODE_PRIVATE).getString("theme_mode", ThemeMode.DARK.name)
         } ?: ThemeMode.DARK
-        viewModelScope.launch { dao.observeGroups().collectLatest { groups = it; revision++ } }
-        viewModelScope.launch { dao.observeMemberships().collectLatest { memberships = it; revision++ } }
-        viewModelScope.launch { dao.observeFavorites().collectLatest { favorites = it.toSet(); revision++ } }
-        viewModelScope.launch { dao.observeRecentIds().collectLatest { recentIds = it; revision++ } }
-        viewModelScope.launch { dao.observeTags().collectLatest { tags = it; revision++ } }
-        viewModelScope.launch { dao.observeTagAssignments().collectLatest { tagAssignments = it; revision++ } }
-        viewModelScope.launch { dao.observeDeletedContacts().collectLatest { deletedContacts = it; revision++ } }
-        viewModelScope.launch { dao.observeEvents().collectLatest { events = it; revision++ } }
-        viewModelScope.launch { dao.observeSmartGroups().collectLatest { smartGroups = it; revision++ } }
-        viewModelScope.launch { dao.purgeOldDeletedContacts(System.currentTimeMillis() - TRASH_RETENTION_MS) }
+        viewModelScope.launch { runCatching { dao.observeGroups().collectLatest { groups = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeMemberships().collectLatest { memberships = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeFavorites().collectLatest { favorites = it.toSet(); revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeRecentIds().collectLatest { recentIds = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeTags().collectLatest { tags = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeTagAssignments().collectLatest { tagAssignments = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeDeletedContacts().collectLatest { deletedContacts = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeEvents().collectLatest { events = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.observeSmartGroups().collectLatest { smartGroups = it; revision++ } } }
+        viewModelScope.launch { runCatching { dao.purgeOldDeletedContacts(System.currentTimeMillis() - TRASH_RETENTION_MS) } }
 
         // Live real-time address book observer
         viewModelScope.launch {
-            repository.observeContactsChanges().collectLatest {
-                if (hasContactsPermission) {
-                    runCatching { repository.loadContacts() }
-                        .onSuccess { contacts = it; revision++ }
+            runCatching {
+                repository.observeContactsChanges().collectLatest {
+                    if (hasContactsPermission) {
+                        runCatching { repository.loadContacts() }
+                            .onSuccess { contacts = it; revision++ }
+                    }
                 }
             }
         }

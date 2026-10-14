@@ -29,9 +29,19 @@ class ContactsRepository(private val context: Context) {
                 trySend(Unit)
             }
         }
-        resolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
+        val registered = try {
+            resolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
+            true
+        } catch (_: Exception) {
+            false
+        }
         awaitClose {
-            resolver.unregisterContentObserver(observer)
+            if (registered) {
+                try {
+                    resolver.unregisterContentObserver(observer)
+                } catch (_: Exception) {
+                }
+            }
         }
     }
 

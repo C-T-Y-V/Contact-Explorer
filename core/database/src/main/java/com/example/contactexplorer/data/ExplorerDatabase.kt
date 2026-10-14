@@ -210,7 +210,7 @@ abstract class ExplorerDatabase : RoomDatabase() {
                 context.applicationContext,
                 ExplorerDatabase::class.java,
                 "contact-explorer.db",
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).fallbackToDestructiveMigration().build().also { instance = it }
         }
     }
 }

@@ -28,10 +28,14 @@ class ExplorerPluginRegistry private constructor(
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T : Any> service(id: String, type: KClass<T>): T? {
         val entry = services.singleOrNull { it.id == id } ?: return null
-        require(type == entry.type) { "Service '$id' was registered as ${entry.type.qualifiedName}." }
-        return type.java.cast(entry.service)
+        return try {
+            entry.service as? T ?: type.java.cast(entry.service)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     class Builder {
