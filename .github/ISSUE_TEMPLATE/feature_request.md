@@ -1,30 +1,42 @@
 ---
 name: Feature Request
-about: Suggest an idea or capability for Contact Explorer
+about: Propose a new capability, architectural improvement, or UI/UX enhancement
 title: '[FEATURE] '
-labels: ['enhancement']
+labels: ['enhancement', 'feature-request']
 assignees: ''
 ---
 
+<!--
+  Contact Explorer Enterprise Android
+  A CTYV PRODUCT — Copyright © 2026 Priyanshu Sharma (CTYV)
+-->
+
 ## 💡 Feature Overview
-A clear and concise description of what feature or enhancement you are proposing.
+A clear and high-impact description of the capability or improvement you are proposing.
 
-## ❓ Problem Statement
-Is your feature request related to a problem? Please describe:
-*e.g. "I'm always frustrated when I need to..."*
+## ❓ Problem Statement & User Value
+Describe the user friction or limitation this feature addresses:
+*e.g. "When managing large address books with > 3,000 contacts, it is difficult to quickly..."*
 
-## 🚀 Proposed Solution
-Describe the solution you'd like to see implemented. If applicable, specify which module this touches:
-- [ ] `:app` (Shell UI / ViewModel)
-- [ ] `:core:database` (Room DB / Schema)
-- [ ] `:core:contacts` (ContactsContract sync)
-- [ ] `:core:plugin-api` / `:core:plugin-registry` (Plugin Engine)
-- [ ] `:feature:*` (AI, Groups, Search, Calling, Appearance)
+## 🚀 Proposed Architectural Solution
+Detail the technical approach and specify which architectural modules will be involved:
+- [ ] `:app` (Jetpack Compose presentation, ViewModel state flow, UI components)
+- [ ] `:core:api` (Shared interface definitions, data models, theme contracts)
+- [ ] `:core:contacts` (System ContentResolver queries, vCard import/export engine)
+- [ ] `:core:database` (Room SQLite schema, DAOs, indices, migrations)
+- [ ] `:core:permissions` (Runtime permission request handling)
+- [ ] `:core:plugin-api` / `:core:plugin-registry` (Dynamic plugin hooks)
+- [ ] `:feature:ai` (On-device heuristic clustering, duplicate analysis)
+- [ ] `:feature:appearance` (Custom theme sets, color tokens, layout styles)
+- [ ] `:feature:calling` (Telephony dispatch, call intent handling)
+- [ ] `:feature:groups` (Contact grouping, batch migration, smart rules)
+- [ ] `:feature:search` (Multi-field fuzzy search, phonetic indexing)
 
-## 🔒 Offline & Privacy Impact
-Does this feature adhere to Contact Explorer's strict **100% Offline / Zero Internet Permission** policy?
-- [ ] Yes, this feature runs entirely on-device with zero network requests.
+## 🔒 Zero-Trust Offline Compliance (Mandatory Invariant)
+Does this feature comply with Contact Explorer's strict **Zero-Trust Offline Policy**?
+- [ ] **Yes**: This capability operates 100% on-device with zero internet permissions (`android.permission.INTERNET` remains absent).
+- [ ] **Yes**: No personal contact data, notes, or metadata leaves the local device sandbox.
 
-## 📉 Binary Footprint Impact
-Will this feature add new third-party dependencies?
-*Note: Any dependency that increases release APK size beyond our 5.0 MB budget will require careful evaluation.*
+## 📉 Binary Size & Performance Budget Impact
+- Estimated impact on the release APK size (target performance budget: `< 5.0 MB`).
+- Will this feature introduce new dependencies into `gradle/libs.versions.toml`? If yes, provide rationale.

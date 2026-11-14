@@ -1,6 +1,6 @@
 # Contributing to Contact Explorer
 
-Thank you for your interest in contributing to **Contact Explorer**! We welcome contributions from developers of all skill levels.
+Thank you for your interest in contributing to **Contact Explorer — A CTYV Product**! We welcome contributions that align with our high standards of privacy, performance, and code quality.
 
 ---
 
@@ -9,46 +9,54 @@ Thank you for your interest in contributing to **Contact Explorer**! We welcome 
 1. **Prerequisites**:
    - Android Studio (Ladybug / Meerkat or later)
    - JDK 17 or JDK 21
-   - Android SDK 35 (Android 15)
+   - Android SDK 35 (Android 15) or Android SDK 36 preview
 
 2. **Clone and Build**:
    ```bash
-   git clone https://github.com/C-T-Y-V/contact-explorer.git
-   cd contact-explorer
+   git clone https://github.com/C-T-Y-V/Contact-Explorer.git
+   cd Contact-Explorer
    ./gradlew assembleDebug
    ```
 
 ---
 
-## 📐 Architecture Principles
+## 📐 Architecture & Dependency Rules
 
 Before opening a Pull Request, please ensure your changes adhere to our core architectural values:
 
-1. **Zero Cloud Dependencies & 100% Privacy**:
-   - Contact Explorer must **never** request `android.permission.INTERNET`.
-   - All AI, grouping, fuzzy searching, and sorting must run 100% on-device.
+1. **Zero Internet & True Privacy**:
+   - Contact Explorer must **never** declare `android.permission.INTERNET`.
+   - All AI clustering, fuzzy searching, sorting, and serialization must execute 100% on-device.
 
-2. **Modular Decoupling**:
-   - New features should be implemented as separate feature modules (`:feature:your-feature`) or plugins adhering to the `ExplorerPlugin` contract in `:core:plugin-api`.
-   - Do not add direct circular dependencies between feature modules.
+2. **Gradle Version Catalog (`gradle/libs.versions.toml`)**:
+   - **Zero Hardcoded Strings:** Never declare dependency versions as string literals in `build.gradle.kts`.
+   - All dependencies and plugins must be added through `gradle/libs.versions.toml` using `libs.*` accessors.
+   - Compose libraries must defer to `libs.compose.bom`.
 
-3. **0ms Optimistic UI**:
-   - User interactions (favorites, deletes, tags, groups) must reflect immediately using Compose `State`. Avoid blocking the UI thread on disk or ContentResolver I/O.
+3. **Code Style & Formatting**:
+   - Adhere strictly to the repository's `.editorconfig` (LF line endings, 4-space indentation for Kotlin, UTF-8).
+   - Use `./gradlew lintDebug` to verify static analysis compliance.
 
-4. **Footprint Awareness**:
-   - Keep dependencies lean. Avoid adding heavy third-party libraries when Android Jetpack or standard Kotlin APIs suffice.
+4. **Modular Decoupling**:
+   - New features must reside within dedicated modules (`:feature:your-feature`) or follow the `ExplorerPlugin` contract in `:core:plugin-api`.
+   - Circular dependencies between feature modules are strictly forbidden.
+
+5. **Binary Footprint Budget**:
+   - The compiled release APK must strictly remain **under 5.0 MB**. Avoid pulling in large third-party transitive dependencies.
 
 ---
 
-## 🧪 Testing and Verification
+## 🧪 Testing & Verification Checklist
 
-Before submitting your Pull Request, verify that all release compilation and minification passes:
-
+Before submitting a Pull Request, verify:
 ```bash
-# Verify release compilation & Kotlin syntax
+# 1. Verify compilation
 ./gradlew compileReleaseKotlin
 
-# Verify R8 minification and resource shrinking
+# 2. Run unit tests
+./gradlew testDebugUnitTest
+
+# 3. Verify minification & size budget (< 5.0 MB)
 ./gradlew assembleRelease
 ```
 
@@ -56,15 +64,22 @@ Before submitting your Pull Request, verify that all release compilation and min
 
 ## 📝 Commit Conventions
 
-We follow standard Conventional Commits:
+We follow Conventional Commits:
 - `feat:` for new user-facing features or capabilities
 - `fix:` for bug fixes
 - `perf:` for performance optimizations and binary footprint reductions
 - `refactor:` for code restructuring without behavioral changes
 - `docs:` for documentation updates
+- `chore:` for build tooling, version catalog, or maintenance
 
 ---
 
-## 📄 License
+## 📄 License & Attribution Agreement
 
-By contributing to Contact Explorer, you agree that your contributions will be licensed under the project's [Apache 2.0 License](LICENSE).
+By contributing to Contact Explorer, you agree that your contributions will be licensed under the project's **MIT License (with Attribution)**.
+
+```text
+Copyright © 2026 Priyanshu Sharma (CTYV) — A CTYV Product. All rights reserved.
+```
+
+All redistributions, forks, and derivative works must maintain credit stating: *"A CTYV Product"* or *"Inspired by A CTYV Product"*.

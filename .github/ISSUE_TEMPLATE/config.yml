@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security Vulnerability Report
+    url: https://github.com/C-T-Y-V/Contact-Explorer/security/advisories/new
+    about: Please report security vulnerabilities privately via GitHub Security Advisories instead of opening public issues.
+  - name: 💬 Community Discussions & Questions
+    url: https://github.com/C-T-Y-V/Contact-Explorer/discussions
+    about: Ask questions, share feedback, or discuss development topics with the community.

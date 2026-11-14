@@ -1,14 +1,16 @@
 # Contact Explorer 📱⚡
 
+> **A CTYV PRODUCT** — Engineered by **Priyanshu Sharma (CTYV)**
+
 [![Android CI](https://github.com/C-T-Y-V/Contact-Explorer/actions/workflows/android-ci.yml/badge.svg)](https://github.com/C-T-Y-V/Contact-Explorer/actions/workflows/android-ci.yml)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4.svg?logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
 [![Material 3](https://img.shields.io/badge/Design-Material%203-7C3AED.svg)](https://m3.material.io/)
 [![Room Database](https://img.shields.io/badge/Storage-Room%20SQLite-009688.svg)](https://developer.android.com/training/data-storage/room)
 [![Size](https://img.shields.io/badge/APK%20Size-4.4%20MB-success.svg)](#performance--footprint-optimization)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%7C%20No%20Internet-brightgreen.svg)](#privacy--security-first)
 [![Architecture](https://img.shields.io/badge/Architecture-Modular%20Clean%20%2B%20Plugins-orange.svg)](#architecture)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT%20(Attribution)-blue.svg)](LICENSE)
 
 An ultra-lightweight, 100% offline, privacy-first Android address book and contacts intelligence platform. Built from the ground up with **Modern Jetpack Compose**, a **Decoupled Plugin Architecture**, and **On-Device AI Clustering** — packing enterprise-grade capabilities into an astonishing **4.4 MB footprint**.
 
@@ -16,7 +18,7 @@ An ultra-lightweight, 100% offline, privacy-first Android address book and conta
 
 ## 🌟 Why Contact Explorer?
 
-Default phonebook apps from major OEMs are bloated (often 40 MB – 100 MB+), heavily reliant on cloud lock-in, and lack meaningful on-device intelligence. 
+Default phonebook apps from major OEMs are bloated (often 40 MB – 100 MB+), heavily reliant on cloud lock-in, and lack meaningful on-device intelligence.
 
 **Contact Explorer** was engineered to solve three core problems:
 1. **Zero Cloud Dependency & True Privacy**: Operates with **zero internet permissions**. Your contacts, notes, and call patterns never leave your phone.
@@ -136,7 +138,7 @@ The engineering journey of Contact Explorer represents a deliberate evolution in
 - **v2.0 (18.2 MB)**: Decoupled into multi-module Clean Architecture (`:core` and `:feature`). Introduced 30-day Recycle Bin and granular VCF field sharing.
 - **v3.0 (18.5 MB)**: Implemented compile-time `ExplorerPluginRegistry`. Allowed runtime enabling/disabling of individual feature modules without app restarts.
 - **v4.0 (4.4 MB)**: Enabled R8 full-mode shrinking, DEX bytecode optimization, and resource stripping (`isMinifyEnabled = true`, `isShrinkResources = true`). Tuned ProGuard rules to ensure zero reflection crashes in Room DB and Kotlin metadata.
-- **v5.0 (4.4 MB)**: 
+- **v5.0 (4.4 MB)**:
   - Redesigned TopBar with a unified 3-dot overflow menu, eliminating header overcrowding.
   - Implemented single-line titles with ellipsis (`...`) and click-to-expand details dialog.
   - Added dedicated Visual Groups Dashboard (cards, member preview avatars, ungrouped manager).
@@ -200,20 +202,15 @@ app/build/outputs/apk/release/app-release.apk
 
 ---
 
-## 📜 License
+## 📄 License & Legal Attribution
 
+Distributed under the **MIT License (with Attribution)**. See [`LICENSE`](LICENSE) for complete details.
+
+```text
+Copyright © 2026 Priyanshu Sharma (CTYV) — A CTYV Product. All rights reserved.
 ```
-Copyright 2026 Contact Explorer Authors
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+### Derivative Work Attribution Requirement
+Any redistribution, fork, modification, or derivative work based upon this software must prominently retain and display credit referencing the original product as:
+- **"A CTYV Product"** or
+- **"Inspired by A CTYV Product"**

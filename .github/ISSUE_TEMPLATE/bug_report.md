@@ -1,30 +1,49 @@
 ---
 name: Bug Report
-about: Create a report to help us improve Contact Explorer
+about: Report a defect, crash, or unexpected behavior in Contact Explorer
 title: '[BUG] '
 labels: ['bug', 'triage']
 assignees: ''
 ---
 
-## 🐛 Bug Description
-A clear and concise description of what the bug is.
+<!--
+  Contact Explorer Enterprise Android
+  A CTYV PRODUCT — Copyright © 2026 Priyanshu Sharma (CTYV)
+-->
+
+## 🐛 Bug Summary
+A clear, concise description of the observed defect or unexpected behavior.
 
 ## 📱 Device & Environment
-- **Device**: [e.g. Google Pixel 8, Samsung Galaxy S23, Xiaomi 13]
-- **Android Version**: [e.g. Android 14, Android 15]
-- **Contact Explorer Version**: [e.g. v5.0.0]
+- **Device Model**: [e.g. Google Pixel 8, Samsung Galaxy S23, OnePlus 11]
+- **Android OS Version**: [e.g. Android 13, Android 14, Android 15]
+- **Contact Explorer Version**: [e.g. v6.3.0]
+- **Theme Preset Active**: [e.g. CTYV Obsidian, Midnight Emerald, Material You]
 
-## 🔄 Steps to Reproduce
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## 🔄 Reproduction Steps
+1. Navigate to '...'
+2. Tap on '...'
+3. Perform action '...'
+4. Observe failure / crash
 
-## 🎯 Expected Behavior
-A clear and concise description of what you expected to happen.
+## 💥 Frequency of Occurrence
+- [ ] Always (100% reproducible)
+- [ ] Frequently (~50% of attempts)
+- [ ] Rarely / Intermittent (happened once or twice)
 
-## 📸 Screenshots or Screen Recording
-If applicable, add screenshots or screen recordings to help explain the problem.
+## 🎯 Expected vs. Actual Behavior
+- **Expected**: What should have occurred under normal operating conditions.
+- **Actual**: What actually happened (e.g. UI froze, incorrect contact count, crash).
 
-## 📋 Additional Context
-Add any other context about the problem here (e.g. whether the contact had custom fields or whether permissions were granted).
+## 📄 Relevant Logcat Output (Sanitized)
+```text
+// Paste relevant logcat stack trace here (ensure NO real phone numbers, names, or PII are included)
+```
+
+## 📸 Visual Evidence (Screenshots / Screen Recordings)
+If applicable, attach screenshots or short video clips demonstrating the defect.
+
+## 🔒 Privacy & Permissions Context
+- Contacts Permission Granted: [Yes / No]
+- Call Phone Permission Granted: [Yes / No]
+- Approximate Address Book Size: [e.g. < 500, ~2,000, > 5,000 contacts]

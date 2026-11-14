@@ -3,6 +3,53 @@
 All notable changes to **Contact Explorer** will be documented in this file.
 The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v6.3.0] - Phase 5 Enterprise CI/CD Pipeline & Automated Verification Engine (4.57 MB)
+### Added
+- **Multi-Stage Automated CI/CD Pipeline (`.github/workflows/android-ci.yml`)**:
+  - **Job 1 (Static Analysis & Lint)**: Android Lint (`lintDebug`) with baseline filtering (`lint-baseline.xml`) across all 12 modules and Compose compiler performance metrics validation.
+  - **Job 2 (Multi-JDK Unit Test Matrix)**: Parallel unit test execution across JDK 17 & JDK 21 on `ubuntu-latest`, verifying search algorithms and reactive MVI state transformations.
+  - **Job 3 (Release Build & Size Budget Enforcement)**: High-performance release compilation (`assembleRelease`) coupled with portable automated size assessment scripts (`verify-apk-size.sh`, `verify-apk-size.ps1`).
+  - **Job 4 (Artifact Upload & Cryptographic Provenance)**: Standardized CTYV naming (`ContactExplorer_v6.3.0_CTYV.apk`), automated SHA-256 integrity verification (`SHA256SUMS.txt`), and 14-day artifact retention.
+  - **Job 5 (CodeQL Semantic Security Analysis)**: Deep AST static analysis and vulnerability scanning across Kotlin and Room Java DAOs (`.github/workflows/codeql.yml`).
+- **Portable Size Budget Scripts**:
+  - `scripts/verify-apk-size.sh` (POSIX bash with ANSI diagnostics and GitHub Actions annotation reporting).
+  - `scripts/verify-apk-size.ps1` (Native Windows PowerShell script with optional advisory guideline mode).
+- **Formalized Phase 5 Acceptance Criteria (DoD)**:
+  - Automated triggers on Pull Requests and pushes to `main`.
+  - Zero-tolerance failure on unit tests or static analysis; 5.0 MB performance budget tracked as active advisory guideline.
+
+### Changed
+- Upgraded `versionCode` to 9 and `versionName` to 6.3.0.
+
+---
+
+## [v6.2.0] - Phase 4 Architectural Hardening & Reactive MVI State Engine (4.57 MB)
+### Added
+- **Atomic `ExplorerUiState` StateFlow**: Consolidated 16 independent mutable states into an immutable UDF StateFlow (`contacts`, `groups`, `favorites`, `selectedIds`, `themePreset`, `activeFilter`, `isLoading`, `errorMessage`).
+- **Reactive Room Flow Orchestration**: Combined 9 Room DAO flows (`groupsFlow`, `tagsFlow`, `activityFlow`) via `combine()` and `stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ...)`.
+- **ContentObserver Debouncing & Address Book Scaling**:
+  - `debounce(300.milliseconds)` window on `observeContactsChanges()` to eliminate query storms.
+  - Scaled pagination boundary (`DEFAULT_PAGE_LIMIT = 2000`) and chunked 500-item query execution (`DATA_BATCH_CHUNK_SIZE = 500`) preventing cursor OOM.
+  - Fast, low-overhead `getContactCount()` calculation.
+- **State Restoration Across Process Death (`rememberSaveable`)**:
+  - Full state retention across system process death for active search queries, sort orders, view mode (grid/list), filter sections, all modal dialogs, and form draft inputs.
+  - Custom `NullableStringListSaver` for leak-free, crash-free serialization of nullable string collections.
+
+### Changed
+- Deprecated manual `revision++` recomposition hacks in favor of reactive lifecycle-bound flows.
+- Upgraded `versionCode` to 8 and `versionName` to 6.2.0.
+
+---
+
+## [v6.1.0] - CTYV Brand Identity, Adaptive Icon Suite & 5 Theme Sets (4.57 MB)
+### Added
+- **CTYV Brand Attribution**: TopAppBar header tagline, pill badge, and redesigned About & Info modal crediting `Priyanshu Sharma (CTYV) — A CTYV Product`.
+- **Modern Adaptive App Icon Suite**: Android 8.0+ adaptive icons (`ic_launcher`, `ic_launcher_round`), obsidian background (`ic_launcher_background`), neon cyan glyph (`ic_launcher_foreground`), and Android 13+ monochrome icon (`ic_launcher_monochrome`).
+- **Android 12+ SplashScreen API**: Animated vector launch transition (`androidx.core:core-splashscreen`).
+- **5 Multi-Preset Theme Sets Engine**: CTYV Obsidian, CTYV Midnight Emerald, CTYV Royal Amethyst, CTYV Titanium Slate, and Material You Dynamic.
+
+---
+
 ## [v6.0.0] - Persistent Data Vault & Dual-Mode Export (4.4 MB)
 ### Added
 - **Uninstall Data Retention (`android:hasFragileUserData`)**:

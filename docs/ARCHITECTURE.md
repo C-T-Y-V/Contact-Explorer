@@ -82,12 +82,12 @@ Contact Explorer eliminates this perception of lag using a **Dual-Layer Optimist
 ```mermaid
 flowchart TD
     User([User Taps Action: e.g. Star Favorite / Change Group])
-    
+
     subgraph UI_State ["0ms Reaction Layer"]
         UDF[ViewModel StateFlow Mutation]
         Compose[Jetpack Compose Recomposition]
     end
-    
+
     subgraph Async_Sync ["Background Persistence Layer"]
         Room[(Local Room SQLite DB)]
         Sys[(Android ContactsContract Provider)]
