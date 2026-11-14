@@ -25,6 +25,7 @@ room = "2.8.4"
 junit = "4.13.2"
 androidx-test-ext = "1.2.1"
 espresso = "3.6.1"
+json = "20240303"
 
 [libraries]
 # AndroidX Core & Architecture
@@ -54,6 +55,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+org-json = { group = "org.json", name = "json", version.ref = "json" }
 
 [bundles]
 compose = [

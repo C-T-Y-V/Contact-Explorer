@@ -52,11 +52,13 @@ if (-not $sdkPath) {
     Write-Host "[OK] Android SDK located: $sdkPath" -ForegroundColor Green
 }
 
-# 3. Check Git
-Write-Host "[3/4] Validating Git Configuration..." -ForegroundColor Yellow
+# 3. Check Git & Configure Git Hooks
+Write-Host "[3/4] Validating Git Configuration & Initializing Hooks..." -ForegroundColor Yellow
 try {
     $gitVer = git --version
     Write-Host "[OK] Git is available: $gitVer" -ForegroundColor Green
+    git config core.hooksPath .githooks
+    Write-Host "[OK] Configured git config core.hooksPath .githooks" -ForegroundColor Green
 } catch {
     Write-Host "[FAIL] Git command failed. Verify Git for Windows is installed." -ForegroundColor Red
     exit 1

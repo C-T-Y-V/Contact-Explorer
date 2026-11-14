@@ -109,6 +109,7 @@ import com.example.contactexplorer.plugins.FeatureDescriptor
 import com.example.contactexplorer.plugins.KotlinSearchEngine
 import com.example.contactexplorer.ui.components.ConfirmDialog
 import com.example.contactexplorer.ui.components.ContactFormDialog
+import com.example.contactexplorer.ui.components.CtyvBrandBadge
 import com.example.contactexplorer.ui.components.ContactRow
 import com.example.contactexplorer.ui.components.ContactTile
 import com.example.contactexplorer.ui.components.EmptyState
@@ -329,29 +330,7 @@ fun ContactListScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                    ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(5.dp)
-                                        ) {}
-                                        Text(
-                                            text = "A CTYV PRODUCT",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
+                                CtyvBrandBadge()
                                 if (subtitleText != null) {
                                     Text(
                                         text = "• $subtitleText",

@@ -56,12 +56,14 @@ else
 fi
 
 # 3. Check Git & Core Configuration
-echo -e "${BOLD}[3/4] Validating Git Configuration...${RESET}"
+echo -e "${BOLD}[3/4] Validating Git Configuration & Initializing Hooks...${RESET}"
 if ! command -v git >/dev/null 2>&1; then
     echo -e "${RED}[FAIL] Git is not installed or not found in PATH!${RESET}"
     exit 1
 fi
 echo -e "${GREEN}[OK] Git is available: $(git --version)${RESET}"
+git config core.hooksPath .githooks
+echo -e "${GREEN}[OK] Configured git config core.hooksPath .githooks${RESET}"
 
 # 4. Verify Gradle Wrapper Permissions
 echo -e "${BOLD}[4/4] Verifying Gradle Executable Permissions...${RESET}"

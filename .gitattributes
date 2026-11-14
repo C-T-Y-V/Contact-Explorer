@@ -20,12 +20,14 @@
 .editorconfig text eol=lf
 .gitignore text eol=lf
 
-# Executable shell wrapper (must have LF for Linux/macOS runners)
+# Executable shell wrapper & scripts (must have LF for Linux/macOS runners)
 gradlew text eol=lf
+*.sh text eol=lf
 
-# Windows batch files must retain CRLF
+# Windows batch & PowerShell scripts retain CRLF
 *.bat text eol=crlf
 *.cmd text eol=crlf
+*.ps1 text eol=crlf
 gradlew.bat text eol=crlf
 
 # Binary files (prevent any line ending mangling)

@@ -43,5 +43,18 @@ if git diff --cached --name-only | grep -q 'gradle/libs.versions.toml'; then
     fi
 fi
 
+# 5. Zero Hardcoded Coordinates in build.gradle.kts (100% Version Catalog Enforcement)
+STAGED_GRADLE=$(git diff --cached --name-only | grep -E 'build\.gradle\.kts$' || true)
+if [ -n "$STAGED_GRADLE" ]; then
+    for f in $STAGED_GRADLE; do
+        if grep -E '(implementation|api|ksp|testImplementation)\s*\(\s*"[^"]+:[^"]+:[^"]+"' "$f"; then
+            echo "❌ [GOVERNANCE BLOCK] Hardcoded dependency coordinates found in $f:"
+            grep -E '(implementation|api|ksp|testImplementation)\s*\(\s*"[^"]+:[^"]+:[^"]+"' "$f"
+            echo "Every dependency must resolve from gradle/libs.versions.toml via libs.* accessors."
+            exit 1
+        fi
+    done
+fi
+
 echo "✅ [Pre-Commit Gate] Fast check passed (<1s). Proceeding with commit."
 exit 0
