@@ -8,7 +8,7 @@
 agp = "9.0.1"
 kotlin = "2.2.10"
 compose-plugin = "2.2.10"
-ksp = "2.2.10-2.0.2"
+ksp = "2.3.13"
 
 # Jetpack & UI Foundations
 compose-bom = "2026.03.01"
