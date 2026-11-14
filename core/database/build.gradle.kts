@@ -1,6 +1,6 @@
 plugins {
-    id("com.android.library")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -15,7 +15,11 @@ android {
     }
 }
 
-kotlin { compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 } }
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -23,7 +27,7 @@ ksp {
 
 dependencies {
     api(project(":core:api"))
-    api("androidx.room:room-runtime:2.8.4")
-    api("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    api(libs.room.runtime)
+    api(libs.room.ktx)
+    ksp(libs.room.compiler)
 }

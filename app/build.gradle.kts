@@ -1,3 +1,10 @@
+/*
+ * Contact Explorer Enterprise Android
+ * A CTYV PRODUCT
+ * Copyright © 2026 Priyanshu Sharma (CTYV) — A CTYV Product. All rights reserved.
+ * Distributed under the MIT License (with Attribution).
+ */
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -11,8 +18,8 @@ android {
         applicationId = "com.example.contactexplorer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "6.0"
+        versionCode = 9
+        versionName = "6.3.0"
     }
 
     compileOptions {
@@ -38,6 +45,19 @@ android {
             isMinifyEnabled = false
         }
     }
+
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = false
+        baseline = file("lint-baseline.xml")
+        xmlReport = true
+        htmlReport = true
+    }
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler/reports")
+    metricsDestination = layout.buildDirectory.dir("compose_compiler/metrics")
 }
 
 kotlin {
@@ -58,15 +78,19 @@ dependencies {
     implementation(project(":feature:appearance"))
     implementation(project(":feature:search"))
     implementation(project(":feature:ai"))
-    implementation(platform("androidx.compose:compose-bom:2026.03.01"))
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.navigation.compose)
+
+    testImplementation(libs.junit)
 
 }

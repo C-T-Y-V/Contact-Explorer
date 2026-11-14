@@ -37,3 +37,7 @@
 -keep,allowoptimization class * {
     @androidx.compose.runtime.Composable <methods>;
 }
+
+# Keep Android 12+ SplashScreen API components
+-keep class androidx.core.splashscreen.** { *; }
+-keepclassmembers class androidx.core.splashscreen.** { *; }
