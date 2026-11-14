@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Contact Explorer — Pre-Commit Hook Gate
+# A CTYV Product | Priyanshu Sharma (CTYV)
+# ==============================================================================
+
+set -e
+
+echo "Running pre-commit quality checks (Unit tests & formatting)..."
+./gradlew testDebugUnitTest --quiet
+
+if [ $? -ne 0 ]; then
+    echo "❌ Unit tests failed! Please fix test regressions before committing."
+    exit 1
+fi
+
+echo "✅ Pre-commit verification passed."
+exit 0

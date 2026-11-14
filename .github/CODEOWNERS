@@ -1,0 +1,27 @@
+# ==============================================================================
+# Contact Explorer — Code Ownership & Review Routing
+# A CTYV Product | Priyanshu Sharma (CTYV)
+# ==============================================================================
+
+# Global Project Architect
+* @C-T-Y-V
+
+# Build System & Version Catalog
+/gradle/ @C-T-Y-V
+/build.gradle.kts @C-T-Y-V
+/settings.gradle.kts @C-T-Y-V
+
+# Core Infrastructure & Domain Models
+/core/ @C-T-Y-V
+
+# CI/CD Workflows & DevOps Scripts
+/.github/ @C-T-Y-V
+/scripts/ @C-T-Y-V
+
+# Presentation Layer & UI Screens
+/app/ @C-T-Y-V
+
+# Architecture & Governance Documentation
+/docs/ @C-T-Y-V
+/SECURITY.md @C-T-Y-V
+/LICENSE @C-T-Y-V

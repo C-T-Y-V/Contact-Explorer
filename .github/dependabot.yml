@@ -1,0 +1,42 @@
+# ==============================================================================
+# Contact Explorer — Dependabot Supply-Chain Security Configuration
+# A CTYV Product | Priyanshu Sharma (CTYV)
+# ==============================================================================
+
+version: 2
+updates:
+  # Monitor Gradle dependencies in gradle/libs.versions.toml
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Priyanshu"
+    labels:
+      - "dependencies"
+      - "build-system"
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+
+  # Monitor GitHub Actions workflow actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Priyanshu"
+    labels:
+      - "dependencies"
+      - "ci-cd"
+    commit-message:
+      prefix: "ci(deps)"
+      include: "scope"
