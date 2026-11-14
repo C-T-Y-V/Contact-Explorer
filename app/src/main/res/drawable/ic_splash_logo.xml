@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+
+    <!-- Outer Concentric Pulse Ring -->
+    <group
+        android:name="pulse_ring"
+        android:pivotX="80"
+        android:pivotY="80">
+        <path
+            android:name="pulse_ring_path"
+            android:pathData="M 80,32 A 48,48 0 1,0 80,128 A 48,48 0 1,0 80,32"
+            android:strokeWidth="2"
+            android:strokeColor="#00D2FF"
+            android:strokeAlpha="0.5" />
+    </group>
+
+    <!-- CTYV Security Shield Outline & Fill -->
+    <group
+        android:name="shield_group"
+        android:pivotX="80"
+        android:pivotY="80">
+        <path
+            android:name="shield_body"
+            android:pathData="M 80,56 C 88,56 100,52 108,52 C 108,76 104,102 80,116 C 56,102 52,76 52,52 C 60,52 72,56 80,56 Z"
+            android:fillColor="#0C2B4D"
+            android:strokeWidth="3.5"
+            android:strokeColor="#00D2FF" />
+    </group>
+
+    <!-- Central Contact Node & Intelligence Sparks -->
+    <group
+        android:name="core_node"
+        android:pivotX="80"
+        android:pivotY="76">
+        <!-- Contact Head -->
+        <path
+            android:name="contact_head"
+            android:pathData="M 80,60 A 8,8 0 1,0 80,76 A 8,8 0 1,0 80,60"
+            android:fillColor="#38E1FF" />
+        <!-- Contact Torso / Shoulders -->
+        <path
+            android:name="contact_body"
+            android:pathData="M 66,92 C 66,82 72,80 80,80 C 88,80 94,82 94,92 Z"
+            android:fillColor="#00D2FF" />
+        <!-- Amber Accent Spark -->
+        <path
+            android:name="amber_spark"
+            android:pathData="M 98,54 L 102,58 L 98,62 L 94,58 Z"
+            android:fillColor="#FFB020" />
+    </group>
+</vector>

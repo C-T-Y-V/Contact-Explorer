@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,8 +125,8 @@ class BuiltInFeatureScreens(
 
 @Composable
 private fun TagsFeatureScreen(vm: ExplorerViewModel, onAssign: (List<String>, Long) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var selectedTagId by remember { mutableStateOf<Long?>(null) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var selectedTagId by rememberSaveable { mutableStateOf<Long?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Tags", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("Create local tags and apply them to one or more contacts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -162,7 +163,7 @@ private fun TagsFeatureScreen(vm: ExplorerViewModel, onAssign: (List<String>, Lo
 
 @Composable
 private fun ContactPickerDialog(contacts: List<Contact>, onDismiss: () -> Unit, onPick: (List<String>) -> Unit) {
-    var selected by remember { mutableStateOf(setOf<String>()) }
+    var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Apply tag to contacts") },
@@ -172,14 +173,14 @@ private fun ContactPickerDialog(contacts: List<Contact>, onDismiss: () -> Unit, 
                 Text(contact.name)
             }
         } } },
-        confirmButton = { TextButton(onClick = { onPick(selected.toList()) }) { Text("Continue") } },
+        confirmButton = { TextButton(onClick = { onPick(selected) }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
 @Composable
 private fun RecycleBinFeatureScreen(vm: ExplorerViewModel) {
-    var permanent by remember { mutableStateOf<com.example.contactexplorer.data.DeletedContact?>(null) }
+    var permanentContactId by rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Recycle Bin", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("Deleted contacts are kept for 30 days, then removed automatically.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -204,24 +205,25 @@ private fun RecycleBinFeatureScreen(vm: ExplorerViewModel) {
                             Text("Deleted ${DateFormat.getDateTimeInstance().format(Date(contact.deletedAt))}", style = MaterialTheme.typography.bodySmall)
                         }
                         TextButton(onClick = { vm.restoreDeleted(contact) }) { Icon(Icons.Default.Restore, null); Text("Restore") }
-                        IconButton(onClick = { permanent = contact }) { Icon(Icons.Default.Delete, "Delete permanently") }
+                        IconButton(onClick = { permanentContactId = contact.contactId }) { Icon(Icons.Default.Delete, "Delete permanently") }
                     }
                 }
             }
         }
     }
+    val permanent = permanentContactId?.let { id -> vm.deletedContacts.find { it.contactId == id } }
     permanent?.let { contact -> AlertDialog(
-        onDismissRequest = { permanent = null }, title = { Text("Delete ${contact.name} permanently?") },
+        onDismissRequest = { permanentContactId = null }, title = { Text("Delete ${contact.name} permanently?") },
         text = { Text("This removes the saved restore copy from Contact Explorer.") },
-        confirmButton = { TextButton(onClick = { vm.permanentlyDelete(contact); permanent = null }) { Text("Delete permanently") } },
-        dismissButton = { TextButton(onClick = { permanent = null }) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { vm.permanentlyDelete(contact); permanentContactId = null }) { Text("Delete permanently") } },
+        dismissButton = { TextButton(onClick = { permanentContactId = null }) { Text("Cancel") } },
     ) }
 }
 
 @Composable
 private fun DuplicateFeatureScreen(vm: ExplorerViewModel) {
     val groups = OfflineIntelligence.findDuplicateGroups(vm.contacts)
-    var mergeCandidate by remember { mutableStateOf<com.example.contactexplorer.data.DuplicateGroup?>(null) }
+    var mergeCandidateKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Possible duplicates", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
@@ -229,6 +231,7 @@ private fun DuplicateFeatureScreen(vm: ExplorerViewModel) {
         if (groups.isEmpty()) Text("No possible duplicates found.", modifier = Modifier.padding(top = 24.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 12.dp)) {
             items(groups, key = { group -> group.contacts.map(Contact::id).sorted().joinToString("-") }) { group ->
+                val groupKey = group.contacts.map(Contact::id).sorted().joinToString("-")
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -236,7 +239,7 @@ private fun DuplicateFeatureScreen(vm: ExplorerViewModel) {
                                 Text(group.reason, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                                 Text("Confidence: ${group.confidence}% · ${group.contacts.size} contacts", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Button(onClick = { mergeCandidate = group }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+                            Button(onClick = { mergeCandidateKey = groupKey }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
                                 Icon(Icons.Default.CallMerge, null)
                                 Spacer(Modifier.width(4.dp))
                                 Text("Merge")
@@ -254,11 +257,14 @@ private fun DuplicateFeatureScreen(vm: ExplorerViewModel) {
         }
     }
 
+    val mergeCandidate = mergeCandidateKey?.let { key ->
+        groups.find { group -> group.contacts.map(Contact::id).sorted().joinToString("-") == key }
+    }
     mergeCandidate?.let { group ->
         val primary = group.contacts.first()
         val others = group.contacts.drop(1)
         AlertDialog(
-            onDismissRequest = { mergeCandidate = null },
+            onDismissRequest = { mergeCandidateKey = null },
             title = { Text("Merge ${group.contacts.size} contacts?") },
             text = {
                 Text("All phone numbers, email addresses, notes, tags, and groups from '${others.joinToString { it.name }}' will be consolidated into '${primary.name}', and redundant duplicate entries will be removed.")
@@ -266,10 +272,10 @@ private fun DuplicateFeatureScreen(vm: ExplorerViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     vm.mergeContacts(target = primary, sources = group.contacts)
-                    mergeCandidate = null
+                    mergeCandidateKey = null
                 }) { Text("Merge") }
             },
-            dismissButton = { TextButton(onClick = { mergeCandidate = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { mergeCandidateKey = null }) { Text("Cancel") } }
         )
     }
 }
@@ -294,7 +300,7 @@ private fun TimelineFeatureScreen(vm: ExplorerViewModel) {
 
 @Composable
 private fun SmartGroupsFeatureScreen(vm: ExplorerViewModel) {
-    var showCreate by remember { mutableStateOf(false) }
+    var showCreate by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Smart Groups", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("Groups update automatically from local contact fields.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -324,10 +330,10 @@ private fun matchesSmartRule(vm: ExplorerViewModel, rule: SmartGroupRule, contac
 
 @Composable
 private fun SmartGroupDialog(onDismiss: () -> Unit, onCreate: (String, String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var value by remember { mutableStateOf("") }
-    var field by remember { mutableStateOf("company") }
-    var menu by remember { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var value by rememberSaveable { mutableStateOf("") }
+    var field by rememberSaveable { mutableStateOf("company") }
+    var menu by rememberSaveable { mutableStateOf(false) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Create smart group") }, text = {
         Column {
             OutlinedTextField(name, { name = it }, label = { Text("Group name") }, singleLine = true)

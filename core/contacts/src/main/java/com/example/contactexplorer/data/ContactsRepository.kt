@@ -1,10 +1,13 @@
 package com.example.contactexplorer.data
 
 import android.content.ContentProviderOperation
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
@@ -14,15 +17,23 @@ import android.provider.ContactsContract.CommonDataKinds.Organization
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import android.provider.ContactsContract.CommonDataKinds.StructuredPostal
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.withContext
 
 class ContactsRepository(private val context: Context) {
     private val resolver = context.contentResolver
 
+    /**
+     * Observes address book modifications with a 300ms debounce window.
+     * Prevents query storms and cursor contention during bulk synchronization or multi-contact imports.
+     */
+    @OptIn(FlowPreview::class)
     fun observeContactsChanges(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean, uri: Uri?) {
@@ -43,9 +54,30 @@ class ContactsRepository(private val context: Context) {
                 }
             }
         }
+    }.debounce(300.milliseconds)
+
+    /**
+     * Retrieves the total count of contacts recorded in the device address book.
+     */
+    suspend fun getContactCount(): Int = withContext(Dispatchers.IO) {
+        val projection = arrayOf(ContactsContract.Contacts._ID)
+        resolver.query(ContactsContract.Contacts.CONTENT_URI, projection, null, null, null)?.use { cursor ->
+            cursor.count
+        } ?: 0
     }
 
-    suspend fun loadContacts(): List<Contact> = withContext(Dispatchers.IO) {
+    /**
+     * Loads contacts with explicit pagination boundaries.
+     * Prevents OutOfMemory (OOM) exceptions and SQLite CursorWindow exhaustion on enterprise address books
+     * containing >2,000 contacts by capping cursor spans and batching Data-table queries in 500-item chunks.
+     *
+     * @param limit Maximum number of contacts to fetch in this page boundary (defaults to [DEFAULT_PAGE_LIMIT]).
+     * @param offset Starting record index for pagination.
+     */
+    suspend fun loadContacts(
+        limit: Int = DEFAULT_PAGE_LIMIT,
+        offset: Int = 0
+    ): List<Contact> = withContext(Dispatchers.IO) {
         val base = linkedMapOf<String, Contact>()
         val projection = arrayOf(
             ContactsContract.Contacts._ID,
@@ -54,22 +86,70 @@ class ContactsRepository(private val context: Context) {
             ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP,
             ContactsContract.Contacts.TIMES_CONTACTED,
         )
-        resolver.query(ContactsContract.Contacts.CONTENT_URI, projection, null, null, null)?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID)
-            val keyIndex = cursor.getColumnIndexOrThrow(ContactsContract.Contacts.LOOKUP_KEY)
-            val nameIndex = cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)
-            val updatedIndex = cursor.getColumnIndex(ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP)
-            val timesIndex = cursor.getColumnIndex(ContactsContract.Contacts.TIMES_CONTACTED)
-            while (cursor.moveToNext()) {
-                val id = cursor.getString(idIndex) ?: continue
+
+        // Resilient query supporting Android O+ bundle args, SQL LIMIT/OFFSET, and in-memory cursor boundaries
+        val cursor = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val bundle = Bundle().apply {
+                    putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+                    putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
+                    putStringArray(
+                        ContentResolver.QUERY_ARG_SORT_COLUMNS,
+                        arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
+                    )
+                    putInt(
+                        ContentResolver.QUERY_ARG_SORT_DIRECTION,
+                        ContentResolver.QUERY_SORT_DIRECTION_ASCENDING
+                    )
+                }
+                resolver.query(ContactsContract.Contacts.CONTENT_URI, projection, bundle, null)
+            } else null
+        }.getOrNull() ?: runCatching {
+            resolver.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${ContactsContract.Contacts.DISPLAY_NAME} ASC LIMIT $limit OFFSET $offset"
+            )
+        }.getOrNull() ?: resolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            projection,
+            null,
+            null,
+            "${ContactsContract.Contacts.DISPLAY_NAME} ASC"
+        )
+
+        cursor?.use { c ->
+            val idIndex = c.getColumnIndexOrThrow(ContactsContract.Contacts._ID)
+            val keyIndex = c.getColumnIndexOrThrow(ContactsContract.Contacts.LOOKUP_KEY)
+            val nameIndex = c.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)
+            val updatedIndex = c.getColumnIndex(ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP)
+            val timesIndex = c.getColumnIndex(ContactsContract.Contacts.TIMES_CONTACTED)
+
+            var currentPosition = 0
+            while (c.moveToNext()) {
+                if (currentPosition < offset) {
+                    currentPosition++
+                    continue
+                }
+                val id = c.getString(idIndex) ?: continue
                 base[id] = Contact(
                     id = id,
-                    lookupKey = cursor.getString(keyIndex).orEmpty(),
-                    name = cursor.getString(nameIndex).orEmpty().ifBlank { "Unnamed contact" },
-                    lastModified = if (updatedIndex >= 0 && !cursor.isNull(updatedIndex)) cursor.getLong(updatedIndex) else 0L,
-                    timesContacted = if (timesIndex >= 0 && !cursor.isNull(timesIndex)) cursor.getInt(timesIndex) else 0,
+                    lookupKey = c.getString(keyIndex).orEmpty(),
+                    name = c.getString(nameIndex).orEmpty().ifBlank { "Unnamed contact" },
+                    lastModified = if (updatedIndex >= 0 && !c.isNull(updatedIndex)) c.getLong(updatedIndex) else 0L,
+                    timesContacted = if (timesIndex >= 0 && !c.isNull(timesIndex)) c.getInt(timesIndex) else 0,
                 )
+                currentPosition++
+                if (base.size >= limit) {
+                    break
+                }
             }
+        }
+
+        if (base.isEmpty()) {
+            return@withContext emptyList()
         }
 
         val dataProjection = arrayOf(
@@ -86,53 +166,60 @@ class ContactsRepository(private val context: Context) {
         val contactAddresses = mutableMapOf<String, String>()
         val contactNotes = mutableMapOf<String, String>()
 
-        resolver.query(ContactsContract.Data.CONTENT_URI, dataProjection, null, null, null)?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(ContactsContract.Data.CONTACT_ID)
-            val mimeIndex = cursor.getColumnIndexOrThrow(ContactsContract.Data.MIMETYPE)
-            val data1Index = cursor.getColumnIndexOrThrow(ContactsContract.Data.DATA1)
-            val data2Index = cursor.getColumnIndexOrThrow(ContactsContract.Data.DATA2)
-            val data3Index = cursor.getColumnIndexOrThrow(ContactsContract.Data.DATA3)
+        // Query Data table in bounded 500-item chunks to respect SQLite IN-clause limits (999) & avoid CursorWindow memory spikes
+        val idChunks = base.keys.chunked(DATA_BATCH_CHUNK_SIZE)
+        for (chunk in idChunks) {
+            val selection = "${ContactsContract.Data.CONTACT_ID} IN (${chunk.joinToString(",") { "?" }})"
+            val selectionArgs = chunk.toTypedArray()
 
-            while (cursor.moveToNext()) {
-                val contactId = cursor.getString(idIndex) ?: continue
-                if (contactId !in base) continue
-                val mime = cursor.getString(mimeIndex) ?: continue
-                val data1 = cursor.getString(data1Index).orEmpty()
-                val data2 = if (cursor.isNull(data2Index)) 0 else cursor.getInt(data2Index)
-                val data3 = cursor.getString(data3Index)
+            resolver.query(ContactsContract.Data.CONTENT_URI, dataProjection, selection, selectionArgs, null)?.use { dataCursor ->
+                val idIndex = dataCursor.getColumnIndexOrThrow(ContactsContract.Data.CONTACT_ID)
+                val mimeIndex = dataCursor.getColumnIndexOrThrow(ContactsContract.Data.MIMETYPE)
+                val data1Index = dataCursor.getColumnIndexOrThrow(ContactsContract.Data.DATA1)
+                val data2Index = dataCursor.getColumnIndexOrThrow(ContactsContract.Data.DATA2)
+                val data3Index = dataCursor.getColumnIndexOrThrow(ContactsContract.Data.DATA3)
 
-                when (mime) {
-                    Phone.CONTENT_ITEM_TYPE -> {
-                        if (data1.isNotBlank()) {
-                            val label = Phone.getTypeLabel(context.resources, data2, data3).toString()
-                            val list = contactPhones.getOrPut(contactId) { mutableListOf() }
-                            if (list.none { it.value == data1 }) {
-                                list.add(LabeledValue(value = data1, label = label, type = data2, customLabel = data3))
+                while (dataCursor.moveToNext()) {
+                    val contactId = dataCursor.getString(idIndex) ?: continue
+                    if (contactId !in base) continue
+                    val mime = dataCursor.getString(mimeIndex) ?: continue
+                    val data1 = dataCursor.getString(data1Index).orEmpty()
+                    val data2 = if (dataCursor.isNull(data2Index)) 0 else dataCursor.getInt(data2Index)
+                    val data3 = dataCursor.getString(data3Index)
+
+                    when (mime) {
+                        Phone.CONTENT_ITEM_TYPE -> {
+                            if (data1.isNotBlank()) {
+                                val label = Phone.getTypeLabel(context.resources, data2, data3).toString()
+                                val list = contactPhones.getOrPut(contactId) { mutableListOf() }
+                                if (list.none { it.value == data1 }) {
+                                    list.add(LabeledValue(value = data1, label = label, type = data2, customLabel = data3))
+                                }
                             }
                         }
-                    }
-                    Email.CONTENT_ITEM_TYPE -> {
-                        if (data1.isNotBlank()) {
-                            val label = Email.getTypeLabel(context.resources, data2, data3).toString()
-                            val list = contactEmails.getOrPut(contactId) { mutableListOf() }
-                            if (list.none { it.value.equals(data1, ignoreCase = true) }) {
-                                list.add(LabeledValue(value = data1, label = label, type = data2, customLabel = data3))
+                        Email.CONTENT_ITEM_TYPE -> {
+                            if (data1.isNotBlank()) {
+                                val label = Email.getTypeLabel(context.resources, data2, data3).toString()
+                                val list = contactEmails.getOrPut(contactId) { mutableListOf() }
+                                if (list.none { it.value.equals(data1, ignoreCase = true) }) {
+                                    list.add(LabeledValue(value = data1, label = label, type = data2, customLabel = data3))
+                                }
                             }
                         }
-                    }
-                    Organization.CONTENT_ITEM_TYPE -> {
-                        if (contactCompanies[contactId].isNullOrBlank() && data1.isNotBlank()) {
-                            contactCompanies[contactId] = data1
+                        Organization.CONTENT_ITEM_TYPE -> {
+                            if (contactCompanies[contactId].isNullOrBlank() && data1.isNotBlank()) {
+                                contactCompanies[contactId] = data1
+                            }
                         }
-                    }
-                    StructuredPostal.CONTENT_ITEM_TYPE -> {
-                        if (contactAddresses[contactId].isNullOrBlank() && data1.isNotBlank()) {
-                            contactAddresses[contactId] = data1
+                        StructuredPostal.CONTENT_ITEM_TYPE -> {
+                            if (contactAddresses[contactId].isNullOrBlank() && data1.isNotBlank()) {
+                                contactAddresses[contactId] = data1
+                            }
                         }
-                    }
-                    Note.CONTENT_ITEM_TYPE -> {
-                        if (contactNotes[contactId].isNullOrBlank() && data1.isNotBlank()) {
-                            contactNotes[contactId] = data1
+                        Note.CONTENT_ITEM_TYPE -> {
+                            if (contactNotes[contactId].isNullOrBlank() && data1.isNotBlank()) {
+                                contactNotes[contactId] = data1
+                            }
                         }
                     }
                 }
@@ -248,5 +335,10 @@ class ContactsRepository(private val context: Context) {
     suspend fun deleteContact(contactId: String): Int = withContext(Dispatchers.IO) {
         val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
         resolver.delete(uri, null, null)
+    }
+
+    companion object {
+        const val DEFAULT_PAGE_LIMIT = 2000
+        const val DATA_BATCH_CHUNK_SIZE = 500
     }
 }
