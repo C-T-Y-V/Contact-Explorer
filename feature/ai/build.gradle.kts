@@ -28,4 +28,6 @@ dependencies {
     api(project(":core:plugin-registry"))
     api(platform(libs.compose.bom))
     api(libs.bundles.compose)
+
+    testImplementation(libs.junit)
 }

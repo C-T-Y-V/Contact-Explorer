@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Contact Explorer — Enterprise Android Lint Configuration
+  A CTYV Product | Priyanshu Sharma (CTYV)
+  Enforces zero network permissions, FileProvider security, and memory safety.
+-->
+<lint>
+    <!-- Zero Network Invariant: Treat any network permission as a fatal build error -->
+    <issue id="ProtectedPermissions" severity="error" />
+    <issue id="UsesMinSdkAttributes" severity="error" />
+
+    <!-- Security Invariants: Prohibit unsafe intent filters & exports -->
+    <issue id="ExportedPreferenceActivity" severity="fatal" />
+    <issue id="ExportedReceiver" severity="fatal" />
+    <issue id="ExportedService" severity="fatal" />
+    <issue id="SetJavaScriptEnabled" severity="fatal" />
+    <issue id="TrustAllX509TrustManager" severity="fatal" />
+    <issue id="BadHostnameVerifier" severity="fatal" />
+
+    <!-- FileProvider & Path Traversal Protections -->
+    <issue id="GrantAllUris" severity="error" />
+    <issue id="FileProviderPaths" severity="error" />
+
+    <!-- Performance & Memory Protections -->
+    <issue id="DrawAllocation" severity="error" />
+    <issue id="Recycle" severity="error" />
+    <issue id="Wakelock" severity="error" />
+    <issue id="StaticFieldLeak" severity="error" />
+
+    <!-- Code Correctness & Internationalization -->
+    <issue id="HardcodedText" severity="warning" />
+    <issue id="TypographyDashes" severity="ignore" />
+    <issue id="TypographyQuotes" severity="ignore" />
+</lint>

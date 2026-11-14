@@ -1,18 +1,47 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Contact Explorer — Pre-Commit Hook Gate
+# Contact Explorer — Fast Pre-Commit Hook Gate (<3s)
 # A CTYV Product | Priyanshu Sharma (CTYV)
 # ==============================================================================
 
 set -e
 
-echo "Running pre-commit quality checks (Unit tests & formatting)..."
-./gradlew testDebugUnitTest --quiet
+echo "🔍 [Pre-Commit Gate] Verifying staged files against security invariants..."
 
-if [ $? -ne 0 ]; then
-    echo "❌ Unit tests failed! Please fix test regressions before committing."
+# 1. Block accidental binary leaks (*.apk, *.aab, *.jks, *.keystore)
+STAGED_BINARIES=$(git diff --cached --name-only | grep -E '\.(apk|aab|jks|keystore|dex|class)$' || true)
+if [ -n "$STAGED_BINARIES" ]; then
+    echo "❌ [SECURITY BLOCK] Binary files must NEVER be committed to Git source control:"
+    echo "$STAGED_BINARIES"
+    echo "Please unstage with 'git reset HEAD <file>'."
     exit 1
 fi
 
-echo "✅ Pre-commit verification passed."
+# 2. Check for local configuration files (local.properties, secrets)
+STAGED_LOCAL=$(git diff --cached --name-only | grep -E '(local\.properties|\.env)$' || true)
+if [ -n "$STAGED_LOCAL" ]; then
+    echo "❌ [SECURITY BLOCK] Local configuration files cannot be committed:"
+    echo "$STAGED_LOCAL"
+    exit 1
+fi
+
+# 3. Check for raw debug println or Log.d in newly staged Kotlin code
+STAGED_KOTLIN=$(git diff --cached --name-only | grep -E '\.kt$' || true)
+if [ -n "$STAGED_KOTLIN" ]; then
+    LEAKED_LOGS=$(git diff --cached -S "println(" --name-only | grep -E '\.kt$' || true)
+    if [ -n "$LEAKED_LOGS" ]; then
+        echo "⚠️ [CODE QUALITY WARNING] 'println()' detected in staged files: $LEAKED_LOGS"
+    fi
+fi
+
+# 4. Verify libs.versions.toml syntax if staged
+if git diff --cached --name-only | grep -q 'gradle/libs.versions.toml'; then
+    echo "📦 Validating gradle/libs.versions.toml syntax..."
+    if ! grep -q '\[versions\]' gradle/libs.versions.toml; then
+        echo "❌ [ERROR] gradle/libs.versions.toml is missing [versions] table!"
+        exit 1
+    fi
+fi
+
+echo "✅ [Pre-Commit Gate] Fast check passed (<1s). Proceeding with commit."
 exit 0

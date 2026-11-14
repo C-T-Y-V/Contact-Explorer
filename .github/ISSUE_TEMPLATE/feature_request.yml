@@ -1,0 +1,46 @@
+name: 💡 Feature Proposal
+description: Propose a new capability or architectural improvement for Contact Explorer
+title: "[Feature]: "
+labels: ["enhancement", "proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Architectural Constraints for Features
+        Contact Explorer adheres strictly to:
+        1. **Zero Network Egress:** 100% offline, zero cloud telemetry, 0 network permissions.
+        2. **Advisory Size Budget:** Total release APK must remain target-bounded (<5.0 MB).
+        3. **Local Privacy Sandbox:** Data must reside exclusively in local Room SQLite / ContactsProvider.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Use Case
+      description: Is your feature request related to a specific workflow or limitation?
+      placeholder: "I manage over 3,000 corporate contacts and need to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution & UI Behavior
+      description: Describe the solution you'd like and how the user interacts with it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Approaches Considered
+      description: What other solutions or workarounds did you evaluate?
+
+  - type: checkboxes
+    id: alignment
+    attributes:
+      label: Architectural Compliance
+      options:
+        - label: This feature requires NO internet access and operates 100% offline.
+          required: true
+        - label: This feature respects the <5.0 MB APK performance budget.
+          required: true

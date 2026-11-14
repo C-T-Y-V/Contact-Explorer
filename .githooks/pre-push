@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Contact Explorer — Full Pre-Push Quality Gate
+# A CTYV Product | Priyanshu Sharma (CTYV)
+# ==============================================================================
+
+set -e
+
+echo "🚀 [Pre-Push Gate] Executing comprehensive quality verification before remote push..."
+echo "Running: ./scripts/run-all-checks.sh"
+
+if [ -f "./scripts/run-all-checks.sh" ]; then
+    chmod +x ./scripts/run-all-checks.sh ./scripts/verify-apk-size.sh ./scripts/verify-zero-network.sh
+    ./scripts/run-all-checks.sh
+else
+    echo "Executing standard Gradle test verification..."
+    ./gradlew testDebugUnitTest
+fi
+
+echo "✅ [Pre-Push Gate] All quality gates passed! Proceeding with remote push."
+exit 0

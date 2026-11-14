@@ -10,6 +10,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {
@@ -21,4 +24,7 @@ kotlin {
 dependencies {
     api(project(":core:api"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    testImplementation(libs.junit)
+    testImplementation("org.json:json:20240303")
 }
