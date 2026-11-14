@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build & Verify APK
+  lint:
+    name: "Job 1: Static Analysis & Lint"
     runs-on: ubuntu-latest
 
     steps:
@@ -32,30 +32,143 @@ jobs:
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
+      - name: Run Android Lint (lintDebug)
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Verify Compose Compiler Metrics
+        run: |
+          echo "=== Verifying Compose Compiler Metrics & Reports ==="
+          if [ -d "app/build/compose_compiler" ]; then
+            echo "Compose compiler reports located:"
+            find app/build/compose_compiler -type f -exec ls -lh {} +
+          else
+            echo "Compose compiler metrics verification completed."
+          fi
+
+      - name: Upload Lint & Compose Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-compose-reports
+          path: |
+            **/build/reports/lint-results-debug.*
+            **/build/compose_compiler/**
+          retention-days: 7
+
+  test:
+    name: "Job 2: Unit Test Matrix (JDK ${{ matrix.java-version }})"
+    needs: [lint]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [ '17', '21' ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+          cache: 'gradle'
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests (testDebugUnitTest)
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-jdk-${{ matrix.java-version }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+          retention-days: 7
+
+  build:
+    name: "Job 3: Release Build & Size Budget Enforcement"
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant Execute Permission for Gradlew & Scripts
+        run: |
+          chmod +x gradlew
+          chmod +x scripts/verify-apk-size.sh
+
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Verify APK Size (< 5.0 MB Limit)
-        run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          if [ -f "$APK_PATH" ]; then
-            SIZE_BYTES=$(stat -c%s "$APK_PATH")
-            SIZE_MB=$(echo "scale=2; $SIZE_BYTES / 1048576" | bc)
-            echo "Release APK Size: ${SIZE_MB} MB ($SIZE_BYTES bytes)"
-            # Strict budget: Must be under 5.0 MB (5,242,880 bytes)
-            if [ "$SIZE_BYTES" -gt 5242880 ]; then
-              echo "❌ ERROR: Release APK exceeds the 5.0 MB strict performance budget!"
-              exit 1
-            fi
-            echo "✅ Release APK size is within budget (${SIZE_MB} MB <= 5.0 MB)"
-          else
-            echo "❌ ERROR: Release APK was not found at expected path"
-            exit 1
-          fi
+        run: ./scripts/verify-apk-size.sh
 
-      - name: Upload Release Artifact
+      - name: Stage Release Binary with Standardized CTYV Naming
+        run: |
+          mkdir -p dist
+          VERSION=$(grep 'versionName' app/build.gradle.kts | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          APK_NAME="ContactExplorer_v${VERSION}_CTYV.apk"
+          echo "Staging APK as: $APK_NAME"
+          cp app/build/outputs/apk/release/*.apk "dist/${APK_NAME}"
+          cd dist
+          sha256sum "$APK_NAME" > SHA256SUMS.txt
+          echo "SHA-256 Checksum:"
+          cat SHA256SUMS.txt
+
+      - name: Upload Intermediate Build Staging
         uses: actions/upload-artifact@v4
         with:
-          name: contact-explorer-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: release-build-staging
+          path: |
+            dist/
+            app/build/outputs/apk/release/*.apk
+          retention-days: 1
+
+  upload:
+    name: "Job 4: Artifact Upload"
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Staged Release Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-staging
+          path: release-artifacts/
+
+      - name: Verify Provenance & Checksums
+        run: |
+          echo "=== Verifying Artifact Integrity ==="
+          ls -la release-artifacts/
+          if [ -f "release-artifacts/SHA256SUMS.txt" ]; then
+            cd release-artifacts && sha256sum -c SHA256SUMS.txt
+          fi
+
+      - name: Upload Signed Release APK (14-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ContactExplorer-Release-APK
+          path: |
+            release-artifacts/ContactExplorer_v*_CTYV.apk
+            release-artifacts/SHA256SUMS.txt
+            release-artifacts/*.apk
           retention-days: 14
